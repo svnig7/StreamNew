@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stream</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 1.1rem; padding: 1rem;
+    background: #0b0b12; color: #eee;
+    font-family: -apple-system, system-ui, "Segoe UI", sans-serif;
+  }
+  video, audio { width: 100%; max-width: 900px; max-height: 70vh; background: #000; border-radius: 10px; }
+  audio { max-width: 500px; }
+  h1 {
+    font-size: 1rem; font-weight: 600; max-width: 92vw; text-align: center;
+    overflow-wrap: anywhere; margin: 0;
+  }
+  p.hint { color: #9aa0b4; font-size: .85rem; text-align: center; max-width: 26rem; }
+  a.btn {
+    color: #0b0b12; background: #5b9dff; padding: .55rem 1.1rem; border-radius: 8px;
+    text-decoration: none; font-weight: 600; font-size: .9rem;
+  }
+  a.btn:hover { background: #7cb0ff; }
+</style>
+</head>
+<body>
+  <h1 id="title">Loading…</h1>
+  <div id="player"></div>
+  <a class="btn" id="dl" href="#" download>Download</a>
+
+<script>
+(function () {
+  "use strict";
+  var TOKEN = {{ token | tojson }};
+
+  function fail(msg) {
+    document.getElementById("title").textContent = msg;
+  }
+
+  fetch("/api/meta/" + encodeURIComponent(TOKEN))
+    .then(function (r) {
+      if (r.status === 404) throw new Error("gone");
+      if (!r.ok) throw new Error("bad");
+      return r.json();
+    })
+    .then(function (info) {
+      document.title = info.name;
+      document.getElementById("title").textContent = info.name;
+
+      var dl = document.getElementById("dl");
+      dl.href = "/dl/" + encodeURIComponent(TOKEN);
+      dl.setAttribute("download", info.name);
+
+      var mount = document.getElementById("player");
+      if (info.playable) {
+        var tag = info.mime.indexOf("audio/") === 0 ? "audio" : "video";
+        var el = document.createElement(tag);
+        el.controls = true;
+        el.preload = "metadata";
+        el.src = "/stream/" + encodeURIComponent(TOKEN);
+        mount.appendChild(el);
+      } else {
+        var p = document.createElement("p");
+        p.className = "hint";
+        p.textContent = "This file type can't be played in the browser. " +
+          "Use the download button below.";
+        mount.appendChild(p);
+      }
+    })
+    .catch(function (e) {
+      fail(e && e.message === "gone"
+        ? "This link is no longer available."
+        : "Could not load this file. Try again shortly.");
+    });
+})();
+</script>
+</body>
+</html>
